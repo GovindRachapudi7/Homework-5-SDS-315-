@@ -1,0 +1,133 @@
+---
+title: "Homework 5"
+author: "Govind Rachapudi: gr25925"
+date: "2024-02-21"
+output: html_document
+---
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(mosaic)
+library(stringr) 
+```
+
+## Problem 1 - Iron Bank
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+sim_trades <- do(100000)*nflip(n = 2021, prob = .024)
+#head(sim_trades)
+```
+
+Step 1: The null hypothesis is that there is no difference in the flagging rate between Iron Bank trades and trades from other banks.
+
+Step 2: The test statistic is the amount of trades that are flagged out of total trades. For instance, 70 out of 2021.
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+ggplot(sim_trades)+
+  geom_histogram(aes(x=nflip), binwidth = 1, fill = "indianred3", color = "black")
+#the p value is the probability of something out of the norm in accordinance with the data occurring. 
+p_val <- sum(sim_trades >= 70)/100000
+#p_val
+
+```
+
+Step 4: The P value is approximately .0020.
+
+Conclusion: According to the data, the null hypothesis proves to be false since the probably of 70 trades being flagged out of 2021 is .0020. This p value indicates that the null hypothesis can be rejected and assumes that it is false.
+
+## Problem 2
+
+Step 1: There is no difference in the rate of health code violations for Gourmet Bites and average rate of health code violations for restaurants citywide.
+
+Step 2: The test statistic in this case is the number of health code violations that restaurants such as Gourmet Bites receive. For instance, 8 out of 50.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+sim_inspection <- do(100000)*nflip(n = 1500, prob = .03)
+ggplot(sim_inspection)+
+  geom_histogram(aes(x=nflip), binwidth = 1, fill = "coral3", color = "black")
+p_value <- sum(sim_inspection >= 50)/100000
+#p_value
+
+```
+
+Step 3: The P value is .2455
+
+Step 4: In conclusion, we would fail to reject the null hypothesis since the P-value is much greater than 0.05. The rate of health code violations at Gourmet Bites is significantly different from the average rate of 3%.
+
+## Problem 4
+
+#### Part A
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#null distribution
+library(stringr)
+sentences <- readLines("brown_sentences.txt")
+letter_frequencies <- read.csv("letter_frequencies.csv")
+
+#sentence processing
+process <- function(sentence){
+  sentence <- gsub("[^A-Z]", "", toupper(sentence))
+  observed_counts <- rep(0,26)
+  names(observed_counts) <- LETTERS
+  counts <- table(str_split(sentence, "")[[1]])
+  observed_counts[names(counts)] <- counts
+  expected_counts <- letter_frequencies$Probability * nchar(sentence) + 0.1
+  chi_squaretest <- sum((observed_counts-expected_counts)^2 / expected_counts)
+  p_value <- 1-pchisq(chi_squaretest, 25)
+  return(chi_squaretest)
+}
+
+chi_values <- sapply(sentences, process)
+summary(chi_values)
+
+sentence_data <- data.frame(results = chi_values)
+ggplot(sentence_data, aes(x = results))+
+  geom_histogram(fill = "cornflowerblue", color = "black")+
+  labs(title = "Distribution of Chi-Squared Values", 
+       x = "Chi-Squared Value",
+       y = "Frequency")+
+  theme_bw()
+```
+
+The Summary table above represents the range of chi-square values that you can expect to see in normal English sentences.
+
+#### Part B: checking for a watermark
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(kableExtra)
+test_sentences <- c(
+  "She opened the book and started to read the first chapter, eagerly anticipating what might come next.",
+  "Despite the heavy rain, they decided to go for a long walk in the park, crossing the main avenue by the fountain in the center.",
+  "The museum’s new exhibit features ancient artifacts from various civilizations around the world.",
+  "He carefully examined the document, looking for any clues that might help solve the mystery.",
+  "The students gathered in the auditorium to listen to the guest speaker’s inspiring lecture.",
+  "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland.",
+  "The chef demonstrated how to prepare a delicious meal using only locally sourced ingredients, focusing mainly on some excellent dinner recipes from Spain.",
+  "They watched the sunset from the hilltop, marveling at the beautiful array of colors in the sky.",
+  "The committee reviewed the proposal and provided many points of useful feedback to improve the project’s effectiveness.",
+  "Despite the challenges faced during the project, the team worked tirelessly to ensure its successful completion, resulting in a product that exceeded everyone’s expectations."
+)
+
+pval_generator <- function(sentence){
+  sentence <- gsub("[^A-Z]", "", toupper(sentence))
+  observed_counts <- rep(0,26)
+  names(observed_counts) <- LETTERS
+  counts <- table(str_split(sentence, "")[[1]])
+  observed_counts[names(counts)] <- counts
+  expected_counts <- letter_frequencies$Probability * nchar(sentence) +0.1
+  chi_squaretest <- sum((observed_counts-expected_counts)^2 / expected_counts)
+  p_value <- 1-pchisq(chi_squaretest, 9)
+  return(p_value)
+}
+p_values <- sapply(test_sentences, pval_generator)
+#summary(p_values)
+p_values_table <- data.frame(P_Value = round(p_values, digits = 3))
+watermarked <- min(p_values_table)
+#watermarked
+
+kable(p_values_table, format = "html", align = "c", caption = "P-Values for Sentences") %>% 
+  kable_styling(full_width = FALSE)
+```
+
+That sentence that is watermarked is "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland." This is because the p value for this sentence is extremely low (.000000005), which indicates that it almost entirely rejects the null hypothesis.
